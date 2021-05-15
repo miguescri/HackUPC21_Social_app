@@ -1,3 +1,5 @@
+import random
+import string
 from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -161,6 +163,40 @@ def add_user(user: LoginUser):
 @app.get('/user', response_model=User)
 async def get_user(current_user: UserInDB = Depends(get_current_user)):
     return User(email=current_user.email, name=current_user.name)
+
+
+def generate_meeting_id(length: int) -> str:
+    # TODO: this may eventually result in id collisions
+    source = string.ascii_letters + string.digits
+    return ''.join((random.choice(source) for i in range(length)))
+
+
+@app.post('/meetings', response_model=str)
+def create_meeting(user: User = Depends(get_current_user)):
+    # TODO: fix this. user comes with a different session, so I need to merge it.
+    #  Would be cleaner to use only one session
+    session = get_session()
+
+    meeting_id = generate_meeting_id(8)
+    new_meeting = Meeting(id=meeting_id, datetime=datetime.now())
+    new_participant = Participant(user=session.merge(user), meeting=new_meeting)
+
+    session.add(new_participant)
+    session.commit()
+
+    return meeting_id
+
+
+@app.post('/meetings/{meeting_id}/join')
+def join_meeting(meeting_id: str, user: UserInDB = Depends(get_current_user)):
+    # TODO: fix this too
+    session = get_session()
+
+    meeting = session.query(Meeting).filter_by(id=meeting_id).first()
+    new_participant = Participant(user=session.merge(user), meeting=meeting)
+
+    session.add(new_participant)
+    session.commit()
 
 
 if __name__ == '__main__':
