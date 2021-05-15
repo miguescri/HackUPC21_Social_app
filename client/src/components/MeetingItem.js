@@ -1,9 +1,13 @@
-import React, {useState} from "react";
+import React from "react";
 
-function MeetingItem(){
+function MeetingItem({start, end, location, subject}) {
     return (
         <div>
-            I'm a MeetingItem
+            <hr/>
+            <p>Location: {location}</p>
+            <p>Subject: {subject}</p>
+            <p>Start: {start}</p>
+            <p>End: {end}</p>
         </div>
     )
 }

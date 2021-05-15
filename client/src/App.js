@@ -24,7 +24,7 @@ function App() {
     )
 
     if (menu === MENU_MEETINGS) {
-        menuComponent = <MeetingView/>
+        menuComponent = <MeetingView token={token}/>
     } else {
         backComponent = ''
         menuComponent = (
