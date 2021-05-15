@@ -224,6 +224,18 @@ def join_meeting(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depe
     session.commit()
 
 
+@app.get('/meetings/{meeting_id}/participants', response_model=List[User])
+def get_meeting_participants(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
+
+    meeting = session.query(Meeting).filter_by(id=meeting_id).first()
+
+    people = [make_user_from_db(p.user) for p in meeting.participants]
+
+    return people
+
+
 def get_known_people(user: UserInDB) -> List[UserInDB]:
     people = []
     for user_participation in user.participants:
