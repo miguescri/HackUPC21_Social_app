@@ -176,7 +176,7 @@ def generate_meeting_id(length: int) -> str:
 
 
 @app.post('/meetings', response_model=str)
-def create_meeting(user: User = Depends(get_current_user)):
+def create_meeting(user: UserInDB = Depends(get_current_user)):
     # TODO: fix this. user comes with a different session, so I need to merge it.
     #  Would be cleaner to use only one session
     session = get_session()
@@ -201,6 +201,31 @@ def join_meeting(meeting_id: str, user: UserInDB = Depends(get_current_user)):
 
     session.add(new_participant)
     session.commit()
+
+
+@app.post('/points', response_model=User)
+def redeem_points(user: UserInDB = Depends(get_current_user)):
+    session = get_session()
+    user = session.merge(user)
+
+    # Allow to redeem only once per week
+    if not user.last_time_redeem_points or user.last_time_redeem_points + timedelta(days=7) <= datetime.now():
+        friends = []
+        for user_participation in user.participants:
+            # Check meetings that took place within last month
+            if user_participation.meeting.datetime >= datetime.now() - timedelta(days=31):
+                for other_participant in user_participation.meeting.participants:
+                    friend = other_participant.user
+                    # Avoid counting the user as a friend
+                    if friend != user:
+                        friends.append(friend)
+
+        num_friends = len(set(friends))
+        user.points += num_friends
+        user.last_time_redeem_points = datetime.now()
+        session.commit()
+
+    return User(email=user.email, name=user.name, points=user.points)
 
 
 if __name__ == '__main__':
