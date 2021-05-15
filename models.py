@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Column, ForeignKey, String, DateTime
+from sqlalchemy import create_engine, Column, ForeignKey, String, DateTime, Integer
 from sqlalchemy.orm import relationship, sessionmaker
 
 Base = declarative_base()
@@ -12,6 +12,8 @@ class User(Base):
     email = Column(String, primary_key=True)
     name = Column(String)
     hashed_password = Column(String)
+    points = Column(Integer, default=0)
+    last_time_redeem_points = Column(DateTime)
 
 
 class Meeting(Base):

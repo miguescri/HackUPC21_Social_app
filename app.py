@@ -50,12 +50,14 @@ class LoginUser(BaseModel):
 class User(BaseModel):
     email: EmailStr
     name: Optional[str]
+    points: Optional[int]
 
     class Config:
         schema_extra = {
             'example': {
                 'email': 'me@mail.com',
                 'name': 'John Smith',
+                'points': 24,
             }
         }
 
