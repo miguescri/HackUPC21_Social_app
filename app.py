@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, BaseSettings, EmailStr
-from models import User as UserInDB, Meeting, Participant, Interest, create_db, bind_engine, get_session
+from models import User as UserInDB, Meeting as MeetingInDB, Participant, Interest, create_db, bind_engine, get_session
 from sqlalchemy.orm import Session
 
 ALGORITHM = 'HS256'
@@ -61,6 +61,25 @@ class User(BaseModel):
                 'name': 'John Smith',
                 'points': 24,
                 'interests': ['math', 'computers'],
+            }
+        }
+
+
+class Meeting(BaseModel):
+    id: str
+    datetime_start: datetime
+    datetime_end: datetime
+    location: str
+    subject: str
+
+    class Config:
+        schema_extra = {
+            'example': {
+                'id': 'JHJ454',
+                'datetime_start': '2021-05-16 00:18:31.568334',
+                'datetime_end': '2021-05-16 00:20:31.568334',
+                'location': 'Spain',
+                'subject': 'math',
             }
         }
 
@@ -158,8 +177,24 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 def make_user_from_db(user_in_db: UserInDB) -> User:
     interests = [interest.subject for interest in user_in_db.interests]
-    user = User(email=user_in_db.email, name=user_in_db.name, points=user_in_db.points, interests=interests)
+    user = User(
+        email=user_in_db.email,
+        name=user_in_db.name,
+        points=user_in_db.points,
+        interests=interests,
+    )
     return user
+
+
+def make_meeting_from_db(meeting_in_db: MeetingInDB) -> Meeting:
+    meeting = Meeting(
+        id=meeting_in_db.id,
+        datetime_start=meeting_in_db.datetime_start,
+        datetime_end=meeting_in_db.datetime_end,
+        location=meeting_in_db.location,
+        subject=meeting_in_db.subject,
+    )
+    return meeting
 
 
 @app.post('/user', response_model=User)
@@ -197,7 +232,16 @@ def generate_meeting_id(length: int) -> str:
     return ''.join((random.choice(source) for i in range(length)))
 
 
-@app.post('/meetings', response_model=str)
+@app.get('/meeting', response_model=List[Meeting])
+def get_meetings(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    session: Session = user_session_tuple[1]
+
+    meetings = session.query(MeetingInDB).filter(MeetingInDB.datetime_end > datetime.now()).all()
+
+    return [make_meeting_from_db(m) for m in meetings]
+
+
+@app.post('/meetings', response_model=Meeting)
 def create_meeting(hours: int, location: str, subject: str,
                    user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     user: UserInDB = user_session_tuple[0]
@@ -215,7 +259,7 @@ def create_meeting(hours: int, location: str, subject: str,
     meeting_id = generate_meeting_id(8)
     now = datetime.now()
     later = now + timedelta(hours=hours)
-    new_meeting = Meeting(
+    new_meeting = MeetingInDB(
         id=meeting_id,
         datetime_start=now,
         datetime_end=later,
@@ -227,15 +271,15 @@ def create_meeting(hours: int, location: str, subject: str,
     session.add(new_participant)
     session.commit()
 
-    return meeting_id
+    return make_meeting_from_db(new_meeting)
 
 
-@app.post('/meetings/{meeting_id}/join')
+@app.post('/meetings/{meeting_id}/join', response_model=Meeting)
 def join_meeting(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     user: UserInDB = user_session_tuple[0]
     session: Session = user_session_tuple[1]
 
-    meeting = session.query(Meeting).filter_by(id=meeting_id).first()
+    meeting = session.query(MeetingInDB).filter_by(id=meeting_id).first()
     number_participants = len(meeting.participants)
 
     # Limit the capacity of a meeting to six
@@ -259,13 +303,15 @@ def join_meeting(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depe
     session.add(new_participant)
     session.commit()
 
+    return make_meeting_from_db(meeting)
+
 
 @app.get('/meetings/{meeting_id}/participants', response_model=List[User])
 def get_meeting_participants(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     user: UserInDB = user_session_tuple[0]
     session: Session = user_session_tuple[1]
 
-    meeting = session.query(Meeting).filter_by(id=meeting_id).first()
+    meeting = session.query(MeetingInDB).filter_by(id=meeting_id).first()
 
     people = [make_user_from_db(p.user) for p in meeting.participants]
 
