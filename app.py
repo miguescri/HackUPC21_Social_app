@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, BaseSettings, EmailStr
-from models import User as UserInDB, Meeting, Participant, create_db, bind_engine, get_session
+from models import User as UserInDB, Meeting, Participant, Interest, create_db, bind_engine, get_session
 
 ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -175,6 +175,17 @@ def add_user(user: LoginUser):
 @app.get('/user', response_model=User)
 async def get_user(current_user: UserInDB = Depends(get_current_user)):
     return make_user_from_db(current_user)
+
+
+@app.post('/user/interests', response_model=User)
+def add_interests(interests: List[str], user: UserInDB = Depends(get_current_user)):
+    session = get_session()
+    user = session.merge(user)
+    prev_interests = [interest.subject for interest in user.interests]
+    user.interests += [Interest(user=user, subject=i) for i in interests if i not in prev_interests]
+    session.commit()
+
+    return make_user_from_db(user)
 
 
 def generate_meeting_id(length: int) -> str:
