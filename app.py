@@ -173,8 +173,10 @@ def add_user(user: LoginUser):
 
 
 @app.get('/user', response_model=User)
-async def get_user(current_user: UserInDB = Depends(get_current_user)):
-    return make_user_from_db(current_user)
+def get_user(user: UserInDB = Depends(get_current_user)):
+    session = get_session()
+    user = session.merge(user)
+    return make_user_from_db(user)
 
 
 @app.post('/user/interests', response_model=User)
@@ -220,6 +222,29 @@ def join_meeting(meeting_id: str, user: UserInDB = Depends(get_current_user)):
 
     session.add(new_participant)
     session.commit()
+
+
+def get_known_people(user: UserInDB) -> List[UserInDB]:
+    people = []
+    for user_participation in user.participants:
+        for other_participant in user_participation.meeting.participants:
+            friend = other_participant.user
+            # Avoid counting the user as a friend
+            if friend != user:
+                people.append(friend)
+
+    people = list(set(people))
+    return people
+
+
+@app.get('/recommendations', response_model=List[User])
+def get_recommended_friends(user: UserInDB = Depends(get_current_user)):
+    session = get_session()
+    user = session.merge(user)
+    known_people = get_known_people(user)
+    all_people = session.query(UserInDB).filter(UserInDB.email != user.email).all()
+
+    return [make_user_from_db(p) for p in all_people if p not in known_people]
 
 
 @app.post('/points', response_model=User)
