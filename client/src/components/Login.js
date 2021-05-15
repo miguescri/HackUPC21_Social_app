@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import Api from "./Api";
+import Api from "../Api";
 
 function Login({setToken}) {
     const [email, setEmail] = useState('')
