@@ -37,22 +37,26 @@ function Login({setToken}) {
 
     return (
         <div>
-            Hello i'm a login
+            <h1>Login</h1>
 
             <form onSubmit={(e) => {
                 e.preventDefault();
                 login()
             }}>
-                Email:
-                <input
-                    type="text"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}/>
-                Password:
-                <input
-                    type="password"
-                    value={pwd}
-                    onChange={(e) => setPwd(e.target.value)}/>
+                <div>
+                    Email:
+                    <input
+                        type="text"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}/>
+                </div>
+                <div>
+                    Password:
+                    <input
+                        type="password"
+                        value={pwd}
+                        onChange={(e) => setPwd(e.target.value)}/>
+                </div>
                 <input type="submit" value="Login"/>
             </form>
             {errorMessage}
