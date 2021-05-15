@@ -232,7 +232,7 @@ def generate_meeting_id(length: int) -> str:
     return ''.join((random.choice(source) for i in range(length)))
 
 
-@app.get('/meeting', response_model=List[Meeting])
+@app.get('/meetings', response_model=List[Meeting])
 def get_meetings(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     session: Session = user_session_tuple[1]
 
