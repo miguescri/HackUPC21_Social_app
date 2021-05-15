@@ -34,13 +34,15 @@ class TokenData(BaseModel):
 
 class LoginUser(BaseModel):
     email: EmailStr
+    name: Optional[str]
     password: str
 
     class Config:
         schema_extra = {
             'example': {
                 'email': 'me@mail.com',
-                'password': 'secret'
+                'name': 'John Smith',
+                'password': 'secret',
             }
         }
 
@@ -153,7 +155,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.post('/user', response_model=User)
 def add_user(user: LoginUser):
     session = get_session()
-    new_user = UserInDB(email=user.email, hashed_password=get_password_hash(user.password))
+    new_user = UserInDB(email=user.email, name=user.name, hashed_password=get_password_hash(user.password))
     session.add(new_user)
     session.commit()
 
