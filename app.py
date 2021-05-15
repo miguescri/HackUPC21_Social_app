@@ -198,12 +198,21 @@ def generate_meeting_id(length: int) -> str:
 
 
 @app.post('/meetings', response_model=str)
-def create_meeting(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+def create_meeting(hours: int, location: str, subject: str,
+                   user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     user: UserInDB = user_session_tuple[0]
     session: Session = user_session_tuple[1]
 
     meeting_id = generate_meeting_id(8)
-    new_meeting = Meeting(id=meeting_id, datetime=datetime.now())
+    now = datetime.now()
+    later = now + timedelta(hours=hours)
+    new_meeting = Meeting(
+        id=meeting_id,
+        datetime_start=now,
+        datetime_end=later,
+        location=location,
+        subject=subject,
+    )
     new_participant = Participant(user=user, meeting=new_meeting)
 
     session.add(new_participant)

@@ -20,7 +20,10 @@ class Meeting(Base):
     __tablename__ = 'meetings'
 
     id = Column(String, primary_key=True)
-    datetime = Column(DateTime)
+    datetime_start = Column(DateTime)
+    datetime_end = Column(DateTime)
+    location = Column(String)
+    subject = Column(String)
 
 
 class Participant(Base):
