@@ -228,6 +228,21 @@ def redeem_points(user: UserInDB = Depends(get_current_user)):
     return User(email=user.email, name=user.name, points=user.points)
 
 
+@app.post('/buy/pizza', response_model=str)
+def buy_pizza(user: UserInDB = Depends(get_current_user)):
+    session = get_session()
+    user = session.merge(user)
+
+    if user.points < 10:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail='Sorry, friend. You do not have enough points for pizza',
+        )
+    user.points -= 10
+    session.commit()
+    return 'Enjoy your pizza!'
+
+
 if __name__ == '__main__':
     import uvicorn
 
