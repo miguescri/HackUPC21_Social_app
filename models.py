@@ -33,7 +33,17 @@ class Participant(Base):
     meeting = relationship('Meeting', back_populates='participants')
 
 
+class Interest(Base):
+    __tablename__ = 'interests'
+
+    user_id = Column(String, ForeignKey('users.email'), primary_key=True)
+    subject = Column(String, primary_key=True)
+
+    user = relationship('User', back_populates='interests')
+
+
 User.participants = relationship('Participant')
+User.interests = relationship('Interest')
 Meeting.participants = relationship('Participant')
 
 

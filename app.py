@@ -1,6 +1,6 @@
 import random
 import string
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timedelta
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -51,6 +51,7 @@ class User(BaseModel):
     email: EmailStr
     name: Optional[str]
     points: Optional[int]
+    interests: List[str]
 
     class Config:
         schema_extra = {
@@ -58,6 +59,7 @@ class User(BaseModel):
                 'email': 'me@mail.com',
                 'name': 'John Smith',
                 'points': 24,
+                'interests': ['math', 'computers'],
             }
         }
 
@@ -154,6 +156,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
+def make_user_from_db(user_in_db: UserInDB) -> User:
+    interests = [interest.subject for interest in user_in_db.interests]
+    user = User(email=user_in_db.email, name=user_in_db.name, points=user_in_db.points, interests=interests)
+    return user
+
+
 @app.post('/user', response_model=User)
 def add_user(user: LoginUser):
     session = get_session()
@@ -161,12 +169,12 @@ def add_user(user: LoginUser):
     session.add(new_user)
     session.commit()
 
-    return User(email=user.email)
+    return make_user_from_db(new_user)
 
 
 @app.get('/user', response_model=User)
 async def get_user(current_user: UserInDB = Depends(get_current_user)):
-    return User(email=current_user.email, name=current_user.name)
+    return make_user_from_db(current_user)
 
 
 def generate_meeting_id(length: int) -> str:
@@ -225,7 +233,7 @@ def redeem_points(user: UserInDB = Depends(get_current_user)):
         user.last_time_redeem_points = datetime.now()
         session.commit()
 
-    return User(email=user.email, name=user.name, points=user.points)
+    return make_user_from_db(user)
 
 
 @app.post('/buy/pizza', response_model=str)
