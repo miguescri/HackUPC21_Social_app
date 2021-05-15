@@ -237,15 +237,26 @@ def get_known_people(user: UserInDB) -> List[UserInDB]:
     return people
 
 
+def get_similar_people(user: UserInDB, session: Session) -> List[UserInDB]:
+    people = []
+    for user_interest in user.interests:
+        subject = user_interest.subject
+        similar_people = [i.user for i in session.query(Interest).filter_by(subject=subject).all() if i.user != user]
+        people += similar_people
+
+    people = list(set(people))
+    return people
+
+
 @app.get('/recommendations', response_model=List[User])
 def get_recommended_friends(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
     user: UserInDB = user_session_tuple[0]
     session: Session = user_session_tuple[1]
 
     known_people = get_known_people(user)
-    all_people = session.query(UserInDB).filter(UserInDB.email != user.email).all()
+    similar_people = get_similar_people(user, session)
 
-    return [make_user_from_db(p) for p in all_people if p not in known_people]
+    return [make_user_from_db(p) for p in similar_people if p not in known_people]
 
 
 @app.post('/points', response_model=User)
