@@ -53,7 +53,8 @@ def create_db(database: str) -> None:
 
 
 def bind_engine(database: str) -> None:
-    engine = create_engine(database)
+    engine = create_engine(database,
+                           connect_args={"check_same_thread": False})  # Needed for SQLite
     Session.configure(bind=engine)
 
 

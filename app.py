@@ -9,6 +9,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, BaseSettings, EmailStr
 from models import User as UserInDB, Meeting, Participant, Interest, create_db, bind_engine, get_session
+from sqlalchemy.orm import Session
 
 ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -93,20 +94,19 @@ def get_password_hash(password: str):
     return pwd_context.hash(password)
 
 
-def get_user_from_db(email: str) -> UserInDB:
+def get_user_from_db(email: str) -> (UserInDB, Session):
     session = get_session()
     user = session.query(UserInDB).filter_by(email=email).first()
-    if user:
-        return user
+    return user, session
 
 
-def authenticate_user(email: str, password: str):
-    user = get_user_from_db(email)
+def authenticate_user(email: str, password: str) -> (UserInDB, Session):
+    user, session = get_user_from_db(email)
     if not user:
-        return False
+        return False, None
     if not verify_password(password, user.hashed_password):
-        return False
-    return user
+        return False, None
+    return user, session
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -120,7 +120,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> (UserInDB, Session):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',
@@ -134,15 +134,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
-    user = get_user_from_db(token_data.email)
+    user, session = get_user_from_db(token_data.email)
     if user is None:
         raise credentials_exception
-    return user
+    return user, session
 
 
 @app.post('/token', response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
+    user, session = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -173,16 +173,17 @@ def add_user(user: LoginUser):
 
 
 @app.get('/user', response_model=User)
-def get_user(user: UserInDB = Depends(get_current_user)):
-    session = get_session()
-    user = session.merge(user)
+def get_user(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+
     return make_user_from_db(user)
 
 
 @app.post('/user/interests', response_model=User)
-def add_interests(interests: List[str], user: UserInDB = Depends(get_current_user)):
-    session = get_session()
-    user = session.merge(user)
+def add_interests(interests: List[str], user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
+
     prev_interests = [interest.subject for interest in user.interests]
     user.interests += [Interest(user=user, subject=i) for i in interests if i not in prev_interests]
     session.commit()
@@ -197,14 +198,13 @@ def generate_meeting_id(length: int) -> str:
 
 
 @app.post('/meetings', response_model=str)
-def create_meeting(user: UserInDB = Depends(get_current_user)):
-    # TODO: fix this. user comes with a different session, so I need to merge it.
-    #  Would be cleaner to use only one session
-    session = get_session()
+def create_meeting(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
 
     meeting_id = generate_meeting_id(8)
     new_meeting = Meeting(id=meeting_id, datetime=datetime.now())
-    new_participant = Participant(user=session.merge(user), meeting=new_meeting)
+    new_participant = Participant(user=user, meeting=new_meeting)
 
     session.add(new_participant)
     session.commit()
@@ -213,12 +213,12 @@ def create_meeting(user: UserInDB = Depends(get_current_user)):
 
 
 @app.post('/meetings/{meeting_id}/join')
-def join_meeting(meeting_id: str, user: UserInDB = Depends(get_current_user)):
-    # TODO: fix this too
-    session = get_session()
+def join_meeting(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
 
     meeting = session.query(Meeting).filter_by(id=meeting_id).first()
-    new_participant = Participant(user=session.merge(user), meeting=meeting)
+    new_participant = Participant(user=user, meeting=meeting)
 
     session.add(new_participant)
     session.commit()
@@ -238,9 +238,10 @@ def get_known_people(user: UserInDB) -> List[UserInDB]:
 
 
 @app.get('/recommendations', response_model=List[User])
-def get_recommended_friends(user: UserInDB = Depends(get_current_user)):
-    session = get_session()
-    user = session.merge(user)
+def get_recommended_friends(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
+
     known_people = get_known_people(user)
     all_people = session.query(UserInDB).filter(UserInDB.email != user.email).all()
 
@@ -248,9 +249,9 @@ def get_recommended_friends(user: UserInDB = Depends(get_current_user)):
 
 
 @app.post('/points', response_model=User)
-def redeem_points(user: UserInDB = Depends(get_current_user)):
-    session = get_session()
-    user = session.merge(user)
+def redeem_points(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
 
     # Allow to redeem only once per week
     if not user.last_time_redeem_points or user.last_time_redeem_points + timedelta(days=7) <= datetime.now():
@@ -273,10 +274,9 @@ def redeem_points(user: UserInDB = Depends(get_current_user)):
 
 
 @app.post('/buy/pizza', response_model=str)
-def buy_pizza(user: UserInDB = Depends(get_current_user)):
-    session = get_session()
-    user = session.merge(user)
-
+def buy_pizza(user_session_tuple: (UserInDB, Session) = Depends(get_current_user)):
+    user: UserInDB = user_session_tuple[0]
+    session: Session = user_session_tuple[1]
     if user.points < 10:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
