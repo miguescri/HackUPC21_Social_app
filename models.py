@@ -31,6 +31,7 @@ class Participant(Base):
 
     user_id = Column(String, ForeignKey('users.email'), primary_key=True)
     meeting_id = Column(String, ForeignKey('meetings.id'), primary_key=True)
+    datetime_join = Column(DateTime)
 
     user = relationship('User', back_populates='participants')
     meeting = relationship('Meeting', back_populates='participants')

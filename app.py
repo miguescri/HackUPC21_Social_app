@@ -203,6 +203,15 @@ def create_meeting(hours: int, location: str, subject: str,
     user: UserInDB = user_session_tuple[0]
     session: Session = user_session_tuple[1]
 
+    last_joined_meeting = max([p.datetime_join for p in user.participants], default=None)
+
+    # Avoid people joining two meetings in the same hour
+    if last_joined_meeting and last_joined_meeting > datetime.now() - timedelta(hours=1):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Don\'t hop meetings so fast, dude',
+        )
+
     meeting_id = generate_meeting_id(8)
     now = datetime.now()
     later = now + timedelta(hours=hours)
@@ -213,7 +222,7 @@ def create_meeting(hours: int, location: str, subject: str,
         location=location,
         subject=subject,
     )
-    new_participant = Participant(user=user, meeting=new_meeting)
+    new_participant = Participant(user=user, meeting=new_meeting, datetime_join=now)
 
     session.add(new_participant)
     session.commit()
@@ -227,7 +236,25 @@ def join_meeting(meeting_id: str, user_session_tuple: (UserInDB, Session) = Depe
     session: Session = user_session_tuple[1]
 
     meeting = session.query(Meeting).filter_by(id=meeting_id).first()
-    new_participant = Participant(user=user, meeting=meeting)
+    number_participants = len(meeting.participants)
+
+    # Limit the capacity of a meeting to six
+    if number_participants + 1 > 6:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='The meeting is full.',
+        )
+
+    last_joined_meeting = max([p.datetime_join for p in user.participants], default=None)
+
+    # Avoid people joining two meetings in the same hour
+    if last_joined_meeting and last_joined_meeting > datetime.now() - timedelta(hours=1):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Don\'t hop meetings so fast, dude',
+        )
+
+    new_participant = Participant(user=user, meeting=meeting, datetime_join=datetime.now())
 
     session.add(new_participant)
     session.commit()
