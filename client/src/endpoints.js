@@ -60,3 +60,14 @@ export function get_recommendations(token, setUsers) {
         .then(result => result.json())
         .then(data => setUsers(data))
 }
+
+export function buy_pizza(token, setSuccess, setError) {
+    my_fetch(token, '/buy/pizza', VERB_POST)
+        .then(response => {
+            if (response.ok) {
+                setSuccess(true)
+            } else {
+                setError(true)
+            }
+        })
+}
