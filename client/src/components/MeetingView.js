@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import MeetingCreate from "./MeetingCreate";
 import MeetingList from "./MeetingList";
 import MeetingJoin from "./MeetingJoin";
-import {create_meeting, get_meetings} from "../endpoints"
+import {create_meeting, get_meetings, join_meeting} from "../endpoints"
 
 const ACTION_LIST = 0
 const ACTION_CREATE = 1
@@ -12,11 +12,14 @@ function MeetingView({token}) {
     const [action, setAction] = useState(ACTION_LIST)
     const [meetingsList, setMeetingsList] = useState([])
     const [meetingCreated, setMeetingCreated] = useState(null)
+    const [meetingJoined, setMeetingJoined] = useState(null)
     let actionComponent
 
     const refresh = () => get_meetings(token, setMeetingsList)
     const create = (hours, location, subject) => create_meeting(token, hours, location, subject, setMeetingCreated)
     const leave_created = () => setMeetingCreated(null)
+    const join = (meeting_id) => join_meeting(token, meeting_id, setMeetingJoined)
+    const leave_joined = () => setMeetingJoined(null)
 
     if (action === ACTION_LIST) {
         actionComponent = <MeetingList meetings={meetingsList} refresh={refresh}/>
@@ -24,7 +27,7 @@ function MeetingView({token}) {
         actionComponent =
             <MeetingCreate meetingCreated={meetingCreated} createMeeting={create} leaveCreated={leave_created}/>
     } else if (action === ACTION_JOIN) {
-        actionComponent = <MeetingJoin/>
+        actionComponent = <MeetingJoin meetingJoined={meetingJoined} join={join} leave={leave_joined}/>
     }
 
     return (

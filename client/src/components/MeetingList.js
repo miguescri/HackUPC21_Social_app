@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React from "react";
 import MeetingItem from "./MeetingItem";
 
 function MeetingList({meetings, refresh}) {
