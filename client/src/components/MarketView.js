@@ -49,7 +49,7 @@ function MarketView({token}) {
     return (
         <div>
             <h1>
-                Profile
+                Marketplace
             </h1>
             {component}
         </div>
