@@ -3,13 +3,14 @@ import Api from "./Api";
 const VERB_GET = 'GET'
 const VERB_POST = 'POST'
 
-const my_fetch = (token, endpoint, verb, searchParams) => (
+const my_fetch = (token, endpoint, verb, searchParams, body) => (
     fetch(Api + endpoint + '?' + searchParams,
         {
             method: verb,
             mode: 'cors',
             credentials: 'include',
             headers: {'Authorization': 'Bearer ' + token},
+            body: JSON.stringify(body),
         }))
 
 export function get_user(token, setUser) {
@@ -19,7 +20,7 @@ export function get_user(token, setUser) {
 }
 
 export function add_interests(token, interests, setUser) {
-    my_fetch(token, '/user/interests', VERB_POST, interests)
+    my_fetch(token, '/user/interests', VERB_POST, null, interests)
         .then(result => result.json())
         .then(data => setUser(data))
 }
@@ -46,4 +47,10 @@ export function join_meeting(token, meeting_id, setMeeting) {
     my_fetch(token, '/meetings/' + meeting_id + '/join', VERB_POST)
         .then(result => result.json())
         .then(data => setMeeting(data))
+}
+
+export function redeem_points(token, setUser) {
+    my_fetch(token, '/points', VERB_POST)
+        .then(result => result.json())
+        .then(data => setUser(data))
 }

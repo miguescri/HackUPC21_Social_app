@@ -1,9 +1,11 @@
 import React, {useState} from "react";
 import Login from "./components/Login"
 import MeetingView from "./components/MeetingView";
+import ProfileView from "./components/ProfileView";
 
 const MENU_DEFAULT = 0
 const MENU_MEETINGS = 1
+const MENU_PROFILE = 2
 
 function App() {
     const [token, setToken] = useState(null)
@@ -25,6 +27,8 @@ function App() {
 
     if (menu === MENU_MEETINGS) {
         menuComponent = <MeetingView token={token}/>
+    } else if (menu === MENU_PROFILE) {
+        menuComponent = <ProfileView token={token}/>
     } else {
         backComponent = ''
         menuComponent = (
@@ -35,6 +39,12 @@ function App() {
                     setMenu(MENU_MEETINGS)
                 }}>
                     Meetings
+                </button>
+                <button onClick={(e) => {
+                    e.preventDefault()
+                    setMenu(MENU_PROFILE)
+                }}>
+                    Profile
                 </button>
             </div>
         )
