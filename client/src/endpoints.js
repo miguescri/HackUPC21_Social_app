@@ -54,3 +54,9 @@ export function redeem_points(token, setUser) {
         .then(result => result.json())
         .then(data => setUser(data))
 }
+
+export function get_recommendations(token, setUsers) {
+    my_fetch(token, '/recommendations', VERB_GET)
+        .then(result => result.json())
+        .then(data => setUsers(data))
+}

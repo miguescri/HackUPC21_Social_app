@@ -2,10 +2,12 @@ import React, {useState} from "react";
 import Login from "./components/Login"
 import MeetingView from "./components/MeetingView";
 import ProfileView from "./components/ProfileView";
+import RecommendedView from "./components/RecommendedView";
 
 const MENU_DEFAULT = 0
 const MENU_MEETINGS = 1
 const MENU_PROFILE = 2
+const MENU_RECOMMENDED = 3
 
 function App() {
     const [token, setToken] = useState(null)
@@ -29,6 +31,8 @@ function App() {
         menuComponent = <MeetingView token={token}/>
     } else if (menu === MENU_PROFILE) {
         menuComponent = <ProfileView token={token}/>
+    } else if (menu === MENU_RECOMMENDED) {
+        menuComponent = <RecommendedView token={token}/>
     } else {
         backComponent = ''
         menuComponent = (
@@ -46,6 +50,12 @@ function App() {
                 }}>
                     Profile
                 </button>
+                <button onClick={(e) => {
+                    e.preventDefault()
+                    setMenu(MENU_RECOMMENDED)
+                }}>
+                    Recommended new contacts
+                </button>
             </div>
         )
     }
@@ -56,6 +66,7 @@ function App() {
                 <button onClick={(e) => {
                     e.preventDefault()
                     setToken(null)
+                    setMenu((MENU_DEFAULT))
                 }}>
                     Log out
                 </button>
