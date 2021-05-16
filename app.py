@@ -363,7 +363,7 @@ def redeem_points(user_session_tuple: (UserInDB, Session) = Depends(get_current_
         friends = []
         for user_participation in user.participants:
             # Check meetings that took place within last month
-            if user_participation.meeting.datetime >= datetime.now() - timedelta(days=31):
+            if user_participation.meeting.datetime_start >= datetime.now() - timedelta(days=31):
                 for other_participant in user_participation.meeting.participants:
                     friend = other_participant.user
                     # Avoid counting the user as a friend
