@@ -3,14 +3,13 @@ import Api from "./Api";
 const VERB_GET = 'GET'
 const VERB_POST = 'POST'
 
-const my_fetch = (token, endpoint, verb, body) => (
-    fetch(Api + endpoint,
+const my_fetch = (token, endpoint, verb, searchParams) => (
+    fetch(Api + endpoint + '?' + searchParams,
         {
             method: verb,
             mode: 'cors',
             credentials: 'include',
             headers: {'Authorization': 'Bearer ' + token},
-            body: body,
         }))
 
 export function get_user(token, setUser) {
